@@ -1,74 +1,114 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAX_EMPLOYEES 10
-#define DAYS 7
-#define SHIFTS 3
+#define MAX_NAME_LEN 50
+#define DAYS_IN_WEEK 7
 
-const char* shift_names[SHIFTS] = {"Morning", "Evening", "Night"};
-const char* day_names[DAYS] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+const char *days[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+const char *shifts[] = {"Morning", "Evening", "Night"};
 
 typedef struct {
-    char name[50];
-    int availability[DAYS][SHIFTS]; // 1 if available, 0 otherwise
+    char name[MAX_NAME_LEN];
+    int shift[DAYS_IN_WEEK]; // 0=Morning, 1=Evening, 2=Night
 } Employee;
 
-void initialize_availability(Employee employees[], int num_employees) {
-    for (int i = 0; i < num_employees; i++) {
-        for (int d = 0; d < DAYS; d++) {
-            for (int s = 0; s < SHIFTS; s++) {
-                employees[i].availability[d][s] = 1; // All available by default
-            }
+Employee employees[MAX_EMPLOYEES];
+int employee_count = 0;
+
+void addEmployee() {
+    if (employee_count >= MAX_EMPLOYEES) {
+        printf("Max employees reached.\n");
+        return;
+    }
+    printf("Enter employee name: ");
+    scanf(" %[^\n]", employees[employee_count].name);
+
+    printf("Assign shifts for %s:\n", employees[employee_count].name);
+    for (int i = 0; i < DAYS_IN_WEEK; i++) {
+        int shift_choice;
+        printf("  %s (0=Morning, 1=Evening, 2=Night): ", days[i]);
+        scanf("%d", &shift_choice);
+        if (shift_choice >= 0 && shift_choice <= 2)
+            employees[employee_count].shift[i] = shift_choice;
+        else {
+            printf("Invalid shift. Defaulting to Morning.\n");
+            employees[employee_count].shift[i] = 0;
         }
     }
-    // Example: Making Bob unavailable for Night shifts
-    for (int d = 0; d < DAYS; d++) {
-        employees[1].availability[d][2] = 0;
+    employee_count++;
+}
+
+void displayPerDay() {
+    for (int day = 0; day < DAYS_IN_WEEK; day++) {
+        printf("\n--- %s ---\n", days[day]);
+        for (int i = 0; i < employee_count; i++) {
+            printf("%s: %s\n", employees[i].name, shifts[employees[i].shift[day]]);
+        }
     }
 }
 
-void assign_shifts(Employee employees[], int num_employees, int schedule[DAYS][SHIFTS]) {
-    int assigned[DAYS][MAX_EMPLOYEES] = {0};
-
-    for (int d = 0; d < DAYS; d++) {
-        for (int s = 0; s < SHIFTS; s++) {
-            for (int e = 0; e < num_employees; e++) {
-                if (employees[e].availability[d][s] && !assigned[d][e]) {
-                    schedule[d][s] = e;
-                    assigned[d][e] = 1;
-                    break;
-                }
-            }
+void displayPerWeek() {
+    for (int i = 0; i < employee_count; i++) {
+        printf("\n=== Schedule for %s ===\n", employees[i].name);
+        for (int day = 0; day < DAYS_IN_WEEK; day++) {
+            printf("%s: %s\n", days[day], shifts[employees[i].shift[day]]);
         }
     }
 }
 
-void print_schedule(Employee employees[], int schedule[DAYS][SHIFTS]) {
-    printf("Shift Schedule:\n");
-    for (int d = 0; d < DAYS; d++) {
-        printf("%s:\n", day_names[d]);
-        for (int s = 0; s < SHIFTS; s++) {
-            int e = schedule[d][s];
-            printf("  %s: %s\n", shift_names[s], employees[e].name);
-        }
-        printf("\n");
+void saveToFile(const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        printf("Error opening file.\n");
+        return;
     }
+
+    for (int i = 0; i < employee_count; i++) {
+        fprintf(file, "%s\n", employees[i].name);
+        for (int day = 0; day < DAYS_IN_WEEK; day++) {
+            fprintf(file, "%s: %s\n", days[day], shifts[employees[i].shift[day]]);
+        }
+        fprintf(file, "\n");
+    }
+
+    fclose(file);
+    printf("Schedule saved to %s\n", filename);
 }
 
 int main() {
-    Employee employees[MAX_EMPLOYEES] = {
-        {"Alice"},
-        {"Bob"},
-        {"Carol"},
-        {"Dave"},
-        {"Eve"}
-    };
-    int num_employees = 5;
-    int schedule[DAYS][SHIFTS];
+    int choice;
 
-    initialize_availability(employees, num_employees);
-    assign_shifts(employees, num_employees, schedule);
-    print_schedule(employees, schedule);
+    while (1) {
+        printf("\nEmployee Shift Planner\n");
+        printf("1. Add Employee\n");
+        printf("2. Display Schedule Per Day\n");
+        printf("3. Display Schedule Per Week\n");
+        printf("4. Save Schedule to File\n");
+        printf("5. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                addEmployee();
+                break;
+            case 2:
+                displayPerDay();
+                break;
+            case 3:
+                displayPerWeek();
+                break;
+            case 4:
+                saveToFile("schedule.txt");
+                break;
+            case 5:
+                exit(0);
+            default:
+                printf("Invalid choice.\n");
+        }
+    }
 
     return 0;
 }
